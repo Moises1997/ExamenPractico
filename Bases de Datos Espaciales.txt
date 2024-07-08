@@ -1,0 +1,41 @@
+--Respuesta1_SuperficieMenor_8000
+SELECT max(p.id) AS id_predio,
+    c.id AS id_colonia,
+    c.nombre AS nombre_colonia,
+    max(p.geom::text) AS geom_predio
+   FROM prueba2.predio p
+     JOIN prueba2.colonia c ON st_contains(st_transform(c.geom, 6369), st_transform(p.geom, 6369))
+  WHERE st_area(st_transform(c.geom, 6369)) < 8000::double precision
+  GROUP BY c.id, c.nombre
+  ORDER BY c.id
+ LIMIT 5;
+
+
+/**********************************************************/
+
+--Respuesta2_ZonaCatastral
+SELECT t.id,
+    t.nombre,
+    t.geom
+   FROM ( SELECT c.id,
+            c.nombre,
+            c.geom
+           FROM prueba2.colonia c
+             JOIN prueba2.zona_catastral zc ON zc.clave::text = '1100301704'
+          WHERE st_contains(st_transform(zc.geom, 6369), st_transform(c.geom, 6369))
+          ORDER BY c.id) t;
+/**********************************************************/
+
+--Respuesta3_RedesViales
+SELECT rv.id,
+    rv.geom
+   FROM prueba2.red_vial rv
+     JOIN prueba2.colonia c ON st_contains(st_transform(rv.geom, 6369), st_transform(c.geom, 6369))
+     JOIN ( SELECT c_1.id
+           FROM prueba2.colonia c_1
+             JOIN prueba2.predio p ON st_contains(st_transform(c_1.geom, 6369), st_transform(p.geom, 6369))
+          GROUP BY c_1.id
+         HAVING count(*) > 1000) c1k ON c.id = c1k.id
+  WHERE rv.tipovial::text = 'Calle'::text AND st_length(rv.geom) >= 1000::double precision AND st_length(rv.geom) <= 5000::double precision
+ LIMIT 5;
+/**********************************************************/
